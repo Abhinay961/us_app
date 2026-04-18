@@ -1,6 +1,9 @@
 import os
 import io
 import re
+import eventlet
+eventlet.monkey_patch()
+
 from datetime import datetime, timedelta, date
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
