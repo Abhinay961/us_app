@@ -1266,3 +1266,149 @@ body {
     color: white !important;
     box-shadow: 0 0 15px rgba(255,154,158,0.3);
 }
+/* ========================= */
+/* 🚀 PERFORMANCE + UX BOOST */
+/* ========================= */
+
+/* ⚡ Make animations GPU-accelerated */
+*,
+*::before,
+*::after {
+will-change: transform, opacity;
+}
+
+/* ⚡ Smooth scrolling everywhere */
+html {
+scroll-behavior: smooth;
+}
+
+/* ⚡ Faster rendering for SPA content */
+#app-content {
+will-change: opacity, transform;
+transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Page transition states */
+.page-loading {
+opacity: 0.5;
+transform: translateY(10px);
+}
+
+.page-loaded {
+opacity: 1;
+transform: translateY(0);
+}
+
+/* ⚡ Reduce animation jank on mobile */
+@media (max-width: 768px) {
+.heart,
+.butterfly,
+.leaf,
+.ember,
+.star-twinkle {
+animation-duration: 20s !important;
+filter: blur(1px);
+}
+}
+
+/* ⚡ Optimize heavy blur effects */
+.top-navbar,
+.mobile-bottom-nav,
+.auth-card,
+.card {
+will-change: backdrop-filter;
+}
+
+/* ⚡ Improve tap responsiveness */
+button, a {
+touch-action: manipulation;
+}
+
+/* ⚡ Instant click feedback */
+button:active, a:active {
+transform: scale(0.96);
+}
+
+/* ⚡ Reduce layout shift */
+img {
+max-width: 100%;
+height: auto;
+display: block;
+}
+
+/* ⚡ Optimize transitions globally */
+
+* {
+  transition-property: background-color, color, transform, opacity, box-shadow;
+  }
+
+/* ⚡ Improve perceived speed */
+body.loading #app-content {
+opacity: 0.4;
+pointer-events: none;
+}
+
+/* ⚡ Skeleton loading shimmer */
+@keyframes shimmer {
+0% { background-position: -500px 0; }
+100% { background-position: 500px 0; }
+}
+
+.skeleton {
+background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+background-size: 1000px 100%;
+animation: shimmer 2s infinite linear;
+}
+
+/* ⚡ Improve card rendering */
+.card {
+backface-visibility: hidden;
+transform: translateZ(0);
+}
+
+/* ⚡ Prevent scroll lag */
+body {
+will-change: scroll-position;
+}
+
+/* ⚡ Reduce expensive shadows on mobile */
+@media (max-width: 768px) {
+.card:hover {
+transform: translateY(-3px);
+box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+}
+
+/* ⚡ Improve navbar performance */
+.top-navbar {
+transform: translateZ(0);
+}
+
+/* ⚡ Make animations smoother */
+@keyframes smoothFadeIn {
+from { opacity: 0; transform: translateY(8px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-fast {
+animation: smoothFadeIn 0.25s ease forwards;
+}
+
+/* ⚡ Improve floating elements performance */
+.nav-bubble,
+.surprise-orb {
+will-change: transform;
+}
+
+/* ⚡ Reduce CPU usage for background pulse */
+body {
+animation: bgPulse 25s ease-in-out infinite alternate;
+}
+
+/* ⚡ Disable heavy effects on low-power devices */
+@media (prefers-reduced-motion: reduce) {
+* {
+animation: none !important;
+transition: none !important;
+}
+}
