@@ -1,9 +1,6 @@
 import os
 import io
 import re
-import eventlet
-eventlet.monkey_patch()
-
 from datetime import datetime, timedelta, date
 from flask import Flask, render_template, request, redirect, url_for, flash, send_file, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
@@ -22,7 +19,7 @@ app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 login_manager = LoginManager()
 login_manager.login_view = 'login'
