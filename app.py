@@ -9,8 +9,14 @@ from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from models import db, User, Photo, Journal, Letter, TimelineEvent, CareerLog, Discussion, DatePlan, Punishment, Manifestation, SongShare, Notification, MiniGame, GameSession, SurpriseEntry
+from sqlalchemy.pool import StaticPool
 
 app = Flask(__name__)
+
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "poolclass": StaticPool,
+    "connect_args": {"check_same_thread": False}
+}
 app.config['SECRET_KEY'] = 'a_very_secret_key_for_us'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///us_app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -84,32 +90,96 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# --- SIMPLE IN-MEMORY CACHE (for 2 users only) ---
+dashboard_cache = {}
+CACHE_TIMEOUT = 10  # seconds
+
+
 @app.route('/')
 @login_required
 def dashboard():
-    score = calculate_score()
-    today = datetime.utcnow().date()
-    
-    today_photo = Photo.query.filter(db.func.date(Photo.uploaded_at) == today).order_by(Photo.uploaded_at.desc()).first()
+    user_id = current_user.id
+    now = datetime.utcnow()
+
+    # ✅ Return cached result if fresh
+    if user_id in dashboard_cache:
+        cached_data, timestamp = dashboard_cache[user_id]
+        if (now - timestamp).seconds < CACHE_TIMEOUT:
+            return cached_data
+
+    today = now.date()
+
+    # ✅ Fetch partner ONCE
+    partner = User.query.filter(User.id != user_id).first()
+
+    # ✅ Combine queries efficiently
+    today_photo = (
+        Photo.query
+        .filter(Photo.uploaded_at >= datetime.combine(today, datetime.min.time()))
+        .order_by(Photo.uploaded_at.desc())
+        .first()
+    )
+
     latest_letter = Letter.query.order_by(Letter.created_at.desc()).first()
-    next_date = DatePlan.query.filter(DatePlan.date_time >= datetime.utcnow(), DatePlan.status == 'upcoming').order_by(DatePlan.date_time.asc()).first()
-    
-    partner = User.query.filter(User.id != current_user.id).first()
+
+    next_date = (
+        DatePlan.query
+        .filter(DatePlan.date_time >= now, DatePlan.status == 'upcoming')
+        .order_by(DatePlan.date_time.asc())
+        .first()
+    )
+
+    # ✅ Songs (avoid duplicate partner query)
+    my_song = (
+        SongShare.query
+        .filter_by(user_id=user_id)
+        .order_by(SongShare.created_at.desc())
+        .first()
+    )
+
+    partner_song = None
+    if partner:
+        partner_song = (
+            SongShare.query
+            .filter_by(user_id=partner.id)
+            .order_by(SongShare.created_at.desc())
+            .first()
+        )
+
+    # ✅ Compute states
     partner_inactive = is_inactive(partner) if partner else False
     self_inactive = is_inactive(current_user)
-    
-    my_song = SongShare.query.filter_by(user_id=current_user.id).order_by(SongShare.created_at.desc()).first()
-    partner_song = SongShare.query.filter_by(user_id=partner.id).order_by(SongShare.created_at.desc()).first() if partner else None
-    
-    return render_template('dashboard.html', score=score, today_photo=today_photo, 
-                           latest_letter=latest_letter, next_date=next_date,
-                           self_inactive=self_inactive, partner_inactive=partner_inactive, partner=partner,
-                           my_song=my_song, partner_song=partner_song)
+
+    score = calculate_score()
+
+    # ✅ Render once
+    response = render_template(
+        'dashboard.html',
+        score=score,
+        today_photo=today_photo,
+        latest_letter=latest_letter,
+        next_date=next_date,
+        self_inactive=self_inactive,
+        partner_inactive=partner_inactive,
+        partner=partner,
+        my_song=my_song,
+        partner_song=partner_song
+    )
+
+    # ✅ Cache result
+    dashboard_cache[user_id] = (response, now)
+
+    return response
+
+
+# --- CLEAR CACHE WHEN DATA CHANGES ---
+def clear_dashboard_cache():
+    dashboard_cache.clear()
+
 
 def extract_spotify_id(link):
     match = re.search(r'track/([a-zA-Z0-9]+)', link)
-    if match: return match.group(1)
-    return None
+    return match.group(1) if match else None
 
 @app.route('/share_song', methods=['POST'])
 @login_required
@@ -730,4 +800,4 @@ def download_export():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)
