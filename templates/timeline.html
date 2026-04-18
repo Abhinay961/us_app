@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="section-header">
+    <h1 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Our Timeline</h1>
+</div>
+
+<div class="timeline" style="position: relative; max-width: 800px; margin: 0 auto; padding: 2rem 0;">
+    <!-- Vertical line -->
+    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--accent-gradient); transform: translateX(-50%); opacity: 0.5;"></div>
+    
+    {% for event in events %}
+    <div class="timeline-item" style="position: relative; width: 100%; display: flex; justify-content: {{ 'flex-start' if loop.index0 % 2 == 0 else 'flex-end' }}; margin-bottom: 2rem;">
+        <!-- Center Dot -->
+        <div style="position: absolute; left: 50%; top: 20px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg-primary); border: 4px solid var(--accent-pink); transform: translateX(-50%); z-index: 10;"></div>
+        
+        <!-- Content Card -->
+        <div class="card" style="width: 45%; padding: 1.5rem; position: relative; background: var(--bg-card); border: 1px solid var(--border-color); margin: 0;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--accent-pink);">
+                {% if event.event_type == 'photo' %}
+                <i class="fa-solid fa-image"></i>
+                {% elif event.event_type == 'journal' %}
+                <i class="fa-solid fa-book"></i>
+                {% elif event.event_type == 'letter' %}
+                <i class="fa-solid fa-envelope"></i>
+                {% else %}
+                <i class="fa-solid fa-star"></i>
+                {% endif %}
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ event.event_date.strftime('%b %d, %Y - %I:%M %p') }}</span>
+            </div>
+            <h4 style="margin: 0; font-size: 1.1rem; line-height: 1.4;">{{ event.title }}</h4>
+            {% if event.description %}
+            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">{{ event.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-secondary); margin-top: 2rem;">Timeline is empty. Start creating memories!</p>
+    {% endfor %}
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .timeline { padding: 1rem 0; }
+    .timeline > div:first-child { left: 20px; }
+    .timeline-item { justify-content: flex-end !important; }
+    .timeline-item > div:first-child { left: 20px; transform: translateX(-50%); }
+    .timeline-item .card { width: calc(100% - 50px); }
+}
+</style>
+{% endblock %}

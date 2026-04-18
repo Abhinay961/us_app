@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="section-header">
+    <h1 class="section-title"><i class="fa-solid fa-camera-retro"></i> Daily Photos</h1>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+    <h3>Upload Today's Photo</h3>
+    <form method="POST" action="{{ url_for('photos') }}" enctype="multipart/form-data" style="display: flex; gap: 1rem; align-items: center; margin-top: 1rem; flex-wrap: wrap;">
+        <input type="file" name="photo" accept="image/*" required style="flex: 1; padding: 0.5rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px;">
+        <button type="submit" class="btn-primary" style="white-space: nowrap; max-width: 150px;"><i class="fa-solid fa-cloud-arrow-up"></i> Upload</button>
+    </form>
+</div>
+
+<div class="photo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+    {% for photo in photos %}
+    <div class="photo-card" style="border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <img src="{{ url_for('static', filename='uploads/' + photo.filename) }}" alt="Photo" style="width: 100%; height: 250px; object-fit: cover; display: block;">
+        <div class="photo-info" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 1rem; display: flex; justify-content: space-between; align-items: flex-end;">
+            <span style="font-size: 0.9rem; font-weight: bold;">{{ photo.user.username }}</span>
+            <span style="font-size: 0.8rem; color: #ddd;">{{ photo.uploaded_at.strftime('%b %d') }}</span>
+        </div>
+    </div>
+    {% else %}
+    <p style="grid-column: 1/-1; text-align: center; color: var(--text-secondary);">No photos uploaded yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

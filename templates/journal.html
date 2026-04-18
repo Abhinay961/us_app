@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="nature-theme">
+    <!-- Nature Elements -->
+    <div class="ocean-horizon"></div>
+    <div class="tree-silhouette left"></div>
+    <div class="tree-silhouette right"></div>
+    
+    <!-- Butterflies -->
+    <div class="butterfly b1">🦋</div>
+    <div class="butterfly b2">🦋</div>
+    <div class="butterfly b3">🦋</div>
+
+    <!-- Leaves -->
+    <div class="leaf l1">🍃</div>
+    <div class="leaf l2">🍂</div>
+    <div class="leaf l3">🍃</div>
+    <div class="leaf l4">🍂</div>
+
+    <!-- Journal Content -->
+    <div class="journal-content-wrapper relative-z">
+        <div class="section-header" style="text-align: center; justify-content: center; flex-direction: column;">
+            <h1 class="section-title" style="font-family: var(--font-serif); font-size: 2.5rem; color: #a7f3d0;"><i class="fa-solid fa-leaf"></i> Nature's Journal</h1>
+            <p style="color: #6ee7b7; opacity: 0.8;">Breathe deeply. Let your thoughts flow like the ocean.</p>
+        </div>
+
+        <div class="card nature-card">
+            <h3 style="margin-bottom: 1rem; color: #a7f3d0;">Write a new entry</h3>
+            <form method="POST" action="{{ url_for('journal') }}">
+                <div class="input-group">
+                    <textarea name="content" rows="5" placeholder="What is on your mind today?" required style="width: 100%; padding: 1.5rem; border-radius: 15px; background: rgba(0,20,10,0.4); color: white; border: 1px solid rgba(167, 243, 208, 0.2); font-family: var(--font-sans); outline: none; transition: border-color 0.3s;"></textarea>
+                </div>
+                <div class="form-row" style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <select name="mood" style="padding: 0.5rem; border-radius: 5px; background: rgba(0,20,10,0.4); color: white; border: 1px solid rgba(167, 243, 208, 0.2); outline: none;">
+                        <option value="🌿">🌿 Peaceful</option>
+                        <option value="🌊">🌊 Overwhelmed</option>
+                        <option value="☀️">☀️ Joyful</option>
+                        <option value="🌧️">🌧️ Sad</option>
+                        <option value="🔥">🔥 Passionate</option>
+                        <option value="🌙">🌙 Reflective</option>
+                    </select>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #a7f3d0;">
+                        <input type="checkbox" name="is_shared"> Share with partner
+                    </label>
+                </div>
+                <button type="submit" class="btn-primary" style="max-width: 200px; background: linear-gradient(135deg, #059669, #10b981);">Plant Seed 🌱</button>
+            </form>
+        </div>
+
+        <div class="journal-entries" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem;">
+            {% for entry in entries %}
+            <div class="card entry-card nature-card" style="border-left: 4px solid {{ '#10b981' if entry.is_shared else 'rgba(167, 243, 208, 0.3)' }}; margin-bottom: 0;">
+                <div class="entry-header" style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; color: #a7f3d0; font-size: 0.9rem; border-bottom: 1px solid rgba(167, 243, 208, 0.1); padding-bottom: 0.5rem;">
+                    <span><i class="fa-solid {{ 'fa-user-group' if entry.is_shared else 'fa-lock' }}"></i> {{ entry.user.username }}</span>
+                    <span>{{ entry.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                <p class="entry-content" style="white-space: pre-wrap; line-height: 1.8; color: #f8fafc;">{{ entry.content }}</p>
+                {% if entry.mood %}
+                <div class="entry-mood" style="margin-top: 1rem; font-size: 1.5rem;">{{ entry.mood }}</div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p style="color: #6ee7b7; text-align: center; padding: 2rem;">The forest is quiet. Plant the first seed.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

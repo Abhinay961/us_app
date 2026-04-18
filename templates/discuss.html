@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="section-header">
+    <h1 class="section-title"><i class="fa-solid fa-comments"></i> Need to Discuss</h1>
+</div>
+
+<div class="card">
+    <h3>Add Topic</h3>
+    <form method="POST" action="{{ url_for('discussions') }}" style="margin-top: 1rem;">
+        <input type="hidden" name="action" value="create">
+        <div class="input-group">
+            <input type="text" name="title" placeholder="Topic Title" required style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);">
+        </div>
+        <div class="input-group">
+            <textarea name="description" rows="3" placeholder="Context or details..." style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);"></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="max-width: 150px;">Add Topic</button>
+    </form>
+</div>
+
+<div style="display: grid; gap: 1rem; margin-top: 2rem;">
+    {% for disc in discussions %}
+    <div class="card" style="border-left: 4px solid {% if disc.status == 'pending' %}var(--accent-red){% elif disc.status == 'discussed' %}var(--accent-pink){% else %}#10b981{% endif %};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <h4 style="margin: 0; font-size: 1.2rem;">{{ disc.title }}</h4>
+            <span style="font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 0.2rem 0.5rem; border-radius: 10px;">{{ disc.status|title }}</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">Added by {{ disc.creator.username }} on {{ disc.created_at.strftime('%b %d') }}</p>
+        {% if disc.description %}
+        <p style="white-space: pre-wrap; font-size: 0.95rem; margin-bottom: 1rem;">{{ disc.description }}</p>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('discussions') }}" style="display: flex; gap: 0.5rem;">
+            <input type="hidden" name="action" value="update_status">
+            <input type="hidden" name="id" value="{{ disc.id }}">
+            <select name="status" style="padding: 0.5rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);">
+                <option value="pending" {% if disc.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="discussed" {% if disc.status == 'discussed' %}selected{% endif %}>Discussed</option>
+                <option value="resolved" {% if disc.status == 'resolved' %}selected{% endif %}>Resolved</option>
+            </select>
+            <button type="submit" class="btn-secondary" style="padding: 0.5rem 1rem; border-radius: 5px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: white; cursor: pointer;">Update</button>
+        </form>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-secondary);">No discussion topics.</p>
+    {% endfor %}
+</div>
+{% endblock %}

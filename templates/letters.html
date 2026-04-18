@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="vintage-theme" style="margin: -2rem -2rem 0 -2rem; min-height: calc(100vh - var(--nav-height));">
+    <!-- Animated Petals -->
+    <div class="petal" style="top: 10%; left: 20%; animation-duration: 12s;"></div>
+    <div class="petal" style="top: 30%; left: 80%; animation-duration: 15s; animation-delay: 2s;"></div>
+    <div class="petal" style="top: -10%; left: 40%; animation-duration: 10s; animation-delay: 5s;"></div>
+    <div class="petal" style="top: 50%; left: 10%; animation-duration: 18s; animation-delay: 1s;"></div>
+    <div class="petal" style="top: 0%; left: 60%; animation-duration: 14s; animation-delay: 3s;"></div>
+
+    <div class="relative-z" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%;">
+        <div class="section-header">
+            <h1 class="section-title" style="font-family: var(--font-serif);"><i class="fa-solid fa-envelope"></i> Letters</h1>
+        </div>
+
+        <div class="card vintage-card">
+            <h3 style="margin-bottom: 1rem; font-family: var(--font-serif);">Write a Letter</h3>
+            <form method="POST" action="{{ url_for('letters') }}">
+                <div class="input-group">
+                    <input type="text" name="title" placeholder="Letter Title" required style="width: 100%; padding: 1rem; border-radius: 10px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color); font-family: var(--font-serif); font-size: 1.2rem;">
+                </div>
+                <div class="input-group">
+                    <textarea name="content" rows="6" placeholder="My dearest..." required style="width: 100%; padding: 1rem; border-radius: 10px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color); font-family: var(--font-serif); line-height: 1.8;"></textarea>
+                </div>
+                <div class="form-row" style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Category</label>
+                        <select name="category" style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);">
+                            <option value="normal">Normal</option>
+                            <option value="open_when">Open When...</option>
+                            <option value="future">For the Future</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Unlock Date (Optional)</label>
+                        <input type="date" name="unlock_date" style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="max-width: 200px;">Seal & Send <i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </div>
+
+        <div class="letters-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+            {% for letter in letters %}
+            <div class="card vintage-card letter-card" style="display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;">
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                        <span style="font-size: 0.8rem; padding: 0.3rem 0.6rem; border-radius: 20px; background: rgba(255,255,255,0.1); color: var(--text-secondary);">{{ letter.category|replace('_', ' ')|title }}</span>
+                        {% if letter.unlock_date and letter.unlock_date > current_datetime and letter.author_id != current_user.id %}
+                        <span style="color: var(--accent-gold); animation: heartbeatPulse 2s infinite;"><i class="fa-solid fa-lock"></i></span>
+                        {% elif letter.opened_at %}
+                        <span style="color: var(--text-secondary);"><i class="fa-solid fa-envelope-open"></i></span>
+                        {% else %}
+                        <span style="color: var(--accent-pink);"><i class="fa-solid fa-envelope"></i></span>
+                        {% endif %}
+                    </div>
+                    
+                    <h3 style="font-family: var(--font-serif); margin-bottom: 0.5rem;">{{ letter.title }}</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">From: {{ letter.author.username }}</p>
+                    <p style="color: var(--text-secondary); font-size: 0.8rem;">Sent: {{ letter.created_at.strftime('%b %d, %Y') }}</p>
+                </div>
+                
+                {% if letter.unlock_date and letter.unlock_date > current_datetime and letter.author_id != current_user.id %}
+                <!-- Delayed Love Message Lock -->
+                <div class="delayed-letter-lock">
+                    <div style="font-size: 2rem; text-align: center; margin-bottom: 0.5rem;">🔒</div>
+                    <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">Opens in:</p>
+                    <div class="countdown-timer" id="countdown-{{ letter.id }}" data-unlock="{{ letter.unlock_date.isoformat() }}" style="display: flex; justify-content: center; gap: 0.8rem; font-family: var(--font-serif);">
+                        <div class="countdown-unit"><span class="count-val" id="d-{{ letter.id }}">--</span><span class="count-label">days</span></div>
+                        <div class="countdown-unit"><span class="count-val" id="h-{{ letter.id }}">--</span><span class="count-label">hrs</span></div>
+                        <div class="countdown-unit"><span class="count-val" id="m-{{ letter.id }}">--</span><span class="count-label">min</span></div>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ url_for('view_letter', id=letter.id) }}" class="btn-primary open-letter-btn" data-id="{{ letter.id }}" style="text-align: center; display: block; width: 100%;">
+                    <i class="fa-solid fa-envelope-open-text"></i> Open Letter
+                </a>
+                {% endif %}
+            </div>
+            {% else %}
+            <p style="grid-column: 1/-1; text-align: center; color: var(--text-secondary);">No letters exchanged yet.</p>
+            {% endfor %}
+        </div>
+
+        <!-- Cinematic Letter Reveal Overlay -->
+        <div id="letter-reveal-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0); z-index: 3000; transition: background 0.8s ease; align-items: center; justify-content: center;">
+            <div class="envelope-open-anim" id="envelope-anim">
+                <div class="envelope-body">
+                    <div class="envelope-flap"></div>
+                    <i class="fa-solid fa-envelope" style="font-size: 5rem; color: var(--accent-pink); position: relative; z-index: 2;"></i>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        // Countdown timers
+        document.querySelectorAll('.countdown-timer').forEach(el => {
+            const unlockDate = new Date(el.dataset.unlock);
+            const id = el.id.replace('countdown-', '');
+            
+            const tick = () => {
+                const diff = unlockDate - new Date();
+                if (diff <= 0) {
+                    el.closest('.delayed-letter-lock').innerHTML = '<a href="#" class="btn-primary" style="text-align: center; display: block;">Open Letter 💌</a>';
+                    return;
+                }
+                const days = Math.floor(diff / 86400000);
+                const hrs = Math.floor((diff % 86400000) / 3600000);
+                const mins = Math.floor((diff % 3600000) / 60000);
+                document.getElementById(`d-${id}`).textContent = String(days).padStart(2, '0');
+                document.getElementById(`h-${id}`).textContent = String(hrs).padStart(2, '0');
+                document.getElementById(`m-${id}`).textContent = String(mins).padStart(2, '0');
+            };
+            tick();
+            setInterval(tick, 60000);
+        });
+
+        // Cinematic letter open animation
+        document.querySelectorAll('.open-letter-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.href;
+                const overlay = document.getElementById('letter-reveal-overlay');
+                overlay.style.display = 'flex';
+                
+                requestAnimationFrame(() => {
+                    overlay.style.background = 'rgba(0,0,0,0.95)';
+                });
+                
+                setTimeout(() => {
+                    overlay.style.background = 'rgba(0,0,0,0)';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        window.location.href = href;
+                    }, 800);
+                }, 1200);
+            });
+        });
+        </script>
+    </div>
+</div>
+{% endblock %}

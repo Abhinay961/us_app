@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="our-space-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; position: relative; margin-top: 2rem;">
+    <!-- Avatars & Status -->
+    <div class="avatars-wrapper" style="position: relative; margin-bottom: 2rem;">
+        <div class="avatar-ring me" style="display: inline-block; padding: 4px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-pink), var(--accent-gold)); margin-right: -25px; z-index: 2; position: relative; box-shadow: 0 0 25px rgba(255,154,158,0.4);">
+            <div class="avatar-inner" style="width: 90px; height: 90px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-family: var(--font-serif); color: white;">
+                {{ current_user.username[:1].upper() }}
+            </div>
+        </div>
+        
+        {% if partner %}
+        <div class="avatar-ring partner" style="display: inline-block; padding: 4px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta)); z-index: 1; position: relative; box-shadow: 0 0 25px rgba(0,242,254,0.4);">
+            <div class="avatar-inner" style="width: 90px; height: 90px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-family: var(--font-serif); color: white;">
+                {{ partner.username[:1].upper() }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <h1 style="font-family: var(--font-serif); font-size: 3.5rem; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(255,255,255,0.2);">Our Space</h1>
+    <p class="subtitle" style="margin-bottom: 1.5rem; font-size: 1.2rem; color: var(--text-secondary);">A private universe for {{ current_user.username }} & {% if partner %}{{ partner.username }}{% else %}Partner{% endif %}</p>
+
+    <!-- Global Mood Selector -->
+    <div class="mood-sync-engine" style="margin-bottom: 3rem;">
+        <p style="color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem;">How are you feeling?</p>
+        <div class="mood-selector" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+            {% set moods = [('Happy', '😊'), ('Calm', '😌'), ('Stressed', '😫'), ('Missing You', '🥺'), ('Excited', '🤩')] %}
+            {% for mood_name, emoji in moods %}
+            <button onclick="setMood('{{ mood_name }}')" class="mood-btn {% if current_user.current_mood == mood_name %}active{% endif %}" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer; transition: all 0.3s;">
+                {{ emoji }} {{ mood_name }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <script>
+        function setMood(mood) {
+            socket.emit('update_mood', { mood: mood });
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+    </script>
+
+    <!-- Floating Navigation Bubbles -->
+    <div class="nav-bubbles" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; max-width: 800px; margin-bottom: 4rem;">
+        {% set bubbles = [
+            ('journal', 'Journal', 'fa-book'),
+            ('letters', 'Letters', 'fa-envelope'),
+            ('timeline', 'Timeline', 'fa-clock'),
+            ('photos', 'Photos', 'fa-image'),
+            ('career', 'Career', 'fa-briefcase'),
+            ('dates', 'Dates', 'fa-calendar-check'),
+            ('discussions', 'Discuss', 'fa-comments'),
+            ('punishments', 'Superpower', 'fa-bolt'),
+            ('manifestations', 'Manifest', 'fa-wand-magic-sparkles'),
+            ('universe', 'Universe', 'fa-star-of-life')
+        ] %}
+        
+        {% for ep, title, icon in bubbles %}
+        <a href="{{ url_for(ep) }}" class="nav-bubble">
+            <i class="fa-solid {{ icon }}"></i>
+            <span>{{ title }}</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Spotify Widget -->
+<div class="card spotify-widget" style="background: rgba(30, 215, 96, 0.1); border-left: 4px solid #1ed760;">
+    <div class="section-header" style="margin-bottom: 1rem;">
+        <h2 class="section-title"><i class="fa-brands fa-spotify" style="color: #1ed760;"></i> Currently Listening To</h2>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div>
+            <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary);">Me {% if my_song %}({{ my_song.mood }}){% endif %}</h4>
+            {% if my_song %}
+                <iframe style="border-radius:12px" src="{{ my_song.spotify_link }}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            {% else %}
+                <p class="small-text text-secondary">Not sharing a song right now.</p>
+            {% endif %}
+        </div>
+        <div>
+            <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary);">{% if partner %}{{ partner.username }}{% else %}Partner{% endif %} {% if partner_song %}({{ partner_song.mood }}){% endif %}</h4>
+            {% if partner_song %}
+                <iframe style="border-radius:12px" src="{{ partner_song.spotify_link }}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            {% else %}
+                <p class="small-text text-secondary">Not sharing a song right now.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <form method="POST" action="{{ url_for('share_song') }}" style="display: flex; flex-direction: column; gap: 1rem; align-items: center; margin-top: 1rem;">
+        <input type="text" name="spotify_link" placeholder="Paste Spotify Track Link..." required style="width: 100%; max-width: 500px; padding: 1rem; border-radius: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: white; text-align: center; font-size: 1.1rem;">
+        
+        <p style="color: var(--text-secondary); margin: 0.5rem 0;">What's the vibe?</p>
+        <div class="mood-selector">
+            <label class="mood-option chill">
+                <input type="radio" name="mood" value="Chill" required>
+                <span>Chill</span>
+            </label>
+            <label class="mood-option hype">
+                <input type="radio" name="mood" value="Hype">
+                <span>HYPE</span>
+            </label>
+            <label class="mood-option romantic">
+                <input type="radio" name="mood" value="Romantic">
+                <span>Romantic</span>
+            </label>
+            <label class="mood-option sad">
+                <input type="radio" name="mood" value="Sad">
+                <span>Sad</span>
+            </label>
+            <label class="mood-option focused">
+                <input type="radio" name="mood" value="Focused">
+                <span>Focused</span>
+            </label>
+        </div>
+        
+        <button type="submit" class="btn-primary" style="background: #1ed760; color: black; font-weight: bold; border: none; padding: 0.8rem 2.5rem; border-radius: 25px; font-size: 1.1rem; margin-top: 0.5rem;">Share Track <i class="fa-solid fa-share" style="margin-left: 0.5rem;"></i></button>
+    </form>
+</div>
+
+<!-- Connection Score & Partner Mood -->
+<div class="card connection-card" style="text-align: center;">
+    <div class="section-header" style="justify-content: center; margin-bottom: 1rem;">
+        <h2 class="section-title"><i class="fa-solid fa-heart-pulse" style="color: var(--accent-pink);"></i> Connection Score</h2>
+        <span class="score-value" style="font-size: 1.5rem; font-weight: bold; color: var(--accent-gold);">{{ score }}%</span>
+    </div>
+    <div class="progress-bar-container" style="background: rgba(255,255,255,0.1); height: 8px; border-radius: 5px; overflow: hidden; margin-bottom: 1rem;">
+        <div class="progress-bar" style="width: {{ score }}%; background: linear-gradient(90deg, var(--accent-pink), var(--accent-gold)); height: 100%; transition: width 2s ease; box-shadow: 0 0 10px var(--accent-pink);"></div>
+    </div>
+    {% if score >= 80 %}
+    <p class="score-msg">✨ Your bond is radiant. Keep nurturing it. ❤️</p>
+    {% elif score >= 50 %}
+    <p class="score-msg">🌙 Good energy. A little more connection goes a long way.</p>
+    {% else %}
+    <p class="score-msg" style="color: #ff7675;">⚡ Your universe feels quiet. Time to reconnect.</p>
+    {% endif %}
+
+    {% if partner %}
+    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: center; gap: 2rem;">
+        <div class="partner-status" id="partner-status-badge">
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ partner.username }}'s Vibe</div>
+            <div id="partner-mood-display" style="font-size: 1.1rem; margin-top: 0.3rem;">
+                {% if partner.current_mood %}{{ partner.current_mood }}{% else %}Unknown 🌫️{% endif %}
+            </div>
+        </div>
+        <div id="partner-online-status" style="text-align: center;">
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ partner.username }}</div>
+            <div style="margin-top: 0.3rem; font-size: 0.9rem;">
+                <span id="partner-dot" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: {% if partner.is_online %}#00b894{% else %}#636e72{% endif %}; margin-right: 5px; box-shadow: {% if partner.is_online %}0 0 8px #00b894{% else %}none{% endif %};"></span>
+                <span id="partner-status-text">{% if partner.is_online %}Online{% else %}Away{% endif %}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 🎮 Mini Games Card -->
+<div class="card mini-game-card" id="mini-game-card" style="text-align: center; border: 1px solid rgba(242, 201, 76, 0.3); background: rgba(242, 201, 76, 0.05);">
+    <h3 style="font-family: var(--font-serif); margin-bottom: 0.5rem; color: var(--accent-gold);">
+        <i class="fa-solid fa-dice"></i> Couple's Game
+    </h3>
+    <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">A little play goes a long way 💫</p>
+
+    <div class="game-card-inner" id="game-display" style="perspective: 1000px;">
+        <div class="game-question-card" id="game-question">
+            <button onclick="loadGame()" class="btn-primary" style="margin: 0 auto; display: block; padding: 0.8rem 2rem;">
+                <i class="fa-solid fa-shuffle"></i> Get a Game
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+    <!-- Today's Photo -->
+    <div class="card dash-photo">
+        <div class="section-header">
+            <h3 class="section-title"><i class="fa-solid fa-image"></i> Today's Photo</h3>
+        </div>
+        {% if today_photo %}
+        <div class="photo-preview" style="text-align: center;">
+            <img src="{{ url_for('static', filename='uploads/' + today_photo.filename) }}" alt="Today's photo" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <p class="caption" style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">Uploaded by {{ today_photo.user.username }}</p>
+        </div>
+        {% else %}
+        <div class="empty-state" style="text-align: center; padding: 2rem 0;">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">No photo uploaded today.</p>
+            <a href="{{ url_for('photos') }}" class="btn-primary" style="display: inline-block; padding: 0.5rem 1rem; border-radius: 8px;">Upload Now</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions & Info -->
+    <div class="card dash-info">
+        <!-- Next Date -->
+        <div class="dash-section" style="margin-bottom: 1.5rem;">
+            <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-calendar"></i> Next Planned Date</h4>
+            {% if next_date %}
+            <p class="highlight" style="font-weight: 600; font-size: 1.1rem;">{{ next_date.title }}</p>
+            <p class="small-text" style="color: var(--text-secondary); font-size: 0.9rem;">{{ next_date.date_time.strftime('%b %d, %I:%M %p') }} ({{ next_date.date_type }})</p>
+            {% else %}
+            <p class="small-text" style="color: var(--text-secondary); font-size: 0.9rem;">No upcoming dates planned.</p>
+            <a href="{{ url_for('dates') }}" style="color: var(--accent-pink); font-size: 0.9rem;">Plan one</a>
+            {% endif %}
+        </div>
+        
+        <hr class="divider" style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
+        
+        <!-- Latest Letter -->
+        <div class="dash-section" style="margin-bottom: 1.5rem;">
+            <h4 style="margin-bottom: 0.5rem;"><i class="fa-solid fa-envelope"></i> Latest Letter</h4>
+            {% if latest_letter %}
+            <p class="highlight" style="font-weight: 600;">{{ latest_letter.title }}</p>
+            <a href="{{ url_for('view_letter', id=latest_letter.id) }}" style="color: var(--accent-pink); font-size: 0.9rem;">Read</a>
+            {% else %}
+            <p class="small-text" style="color: var(--text-secondary); font-size: 0.9rem;">No letters yet.</p>
+            <a href="{{ url_for('letters') }}" style="color: var(--accent-pink); font-size: 0.9rem;">Write one</a>
+            {% endif %}
+        </div>
+        
+        <hr class="divider" style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
+        
+        <!-- Quick Actions -->
+        <div class="dash-actions" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a href="{{ url_for('journal') }}" style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); transition: background 0.3s;"><i class="fa-solid fa-pen"></i> Journal</a>
+            <a href="{{ url_for('letters') }}" style="flex: 1; text-align: center; background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); transition: background 0.3s;"><i class="fa-solid fa-envelope-open-text"></i> Letter</a>
+        </div>
+    </div>
+</div>
+
+<!-- 🌟 Surprise Drop Orb (floats on screen) -->
+<div id="surprise-orb" class="surprise-orb" onclick="revealSurprise()" title="Tap me!">
+    <i class="fa-solid fa-star"></i>
+</div>
+
+<!-- Surprise Reveal Modal -->
+<div id="surprise-modal" class="surprise-modal" style="display:none;">
+    <div class="surprise-modal-inner">
+        <div id="surprise-particle-burst" class="particle-burst"></div>
+        <h2 style="font-family: var(--font-serif); font-size: 2rem; margin-bottom: 1rem; color: var(--accent-gold);">✨ Surprise Drop!</h2>
+        <p id="surprise-text" style="font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2rem;"></p>
+        <button onclick="closeSurprise()" class="btn-primary">I'll do it! 💫</button>
+    </div>
+</div>
+
+<!-- Mini Game + Surprise Drop JS -->
+<script>
+const GAMES = [
+    { type: "this_or_that", q: "Coffee or Tea?", a: "☕ Coffee", b: "🍵 Tea" },
+    { type: "this_or_that", q: "Sunrise or Sunset?", a: "🌅 Sunrise", b: "🌇 Sunset" },
+    { type: "this_or_that", q: "Stars or Ocean?", a: "⭐ Stars", b: "🌊 Ocean" },
+    { type: "this_or_that", q: "Movie Night or Walk?", a: "🎬 Movie", b: "🚶 Walk" },
+    { type: "quiz", q: "Which one of us would survive longer in the wild?", a: "Me 💪", b: "You 😂" },
+    { type: "quiz", q: "Who is the better cook?", a: "Me 👨‍🍳", b: "You 👩‍🍳" },
+    { type: "quiz", q: "Who falls asleep first?", a: "Me 😴", b: "You 😴" },
+    { type: "dare", q: "Truth: What's the first thing you thought of when you met me?" },
+    { type: "dare", q: "Dare: Send your partner a 10-second voice note right now 🎤" },
+    { type: "dare", q: "Truth: What song secretly reminds you of us? 🎵" },
+];
+
+const SURPRISES = [
+    "Send your partner 3 genuine compliments right now 💌",
+    "Tell your partner one thing you love about them 💭",
+    "Plan a surprise activity for next week 🗓️",
+    "Record a 10-second voice note saying something sweet 🎤",
+    "Share a song that matches your mood right now 🎵",
+    "Write one sentence about your favorite memory together 📝",
+    "Send a photo that made you smile recently 📸",
+];
+
+function loadGame() {
+    const game = GAMES[Math.floor(Math.random() * GAMES.length)];
+    const container = document.getElementById('game-question');
+    
+    if (game.type === 'dare') {
+        container.innerHTML = `
+            <div class="game-reveal" style="animation: fadeInUp 0.5s ease;">
+                <p style="font-size: 1.1rem; color: var(--accent-gold); margin-bottom: 1rem;">${game.q}</p>
+                <button onclick="loadGame()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: white; padding: 0.5rem 1.5rem; border-radius: 20px; cursor: pointer; margin-top: 1rem;">New Game 🔄</button>
+            </div>`;
+    } else {
+        container.innerHTML = `
+            <div class="game-reveal" style="animation: fadeInUp 0.5s ease;">
+                <p style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 1rem;">${game.type === 'quiz' ? '🧠 Who?' : '👆 Pick One'}</p>
+                <p style="font-size: 1.2rem; font-family: var(--font-serif); margin-bottom: 1.5rem;">${game.q}</p>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="pickAnswer('${game.a}')" class="game-btn">${game.a}</button>
+                    <button onclick="pickAnswer('${game.b}')" class="game-btn">${game.b}</button>
+                </div>
+                <button onclick="loadGame()" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; margin-top: 1.5rem; font-size: 0.85rem;">Skip ↻</button>
+            </div>`;
+    }
+}
+
+function pickAnswer(answer) {
+    const container = document.getElementById('game-question');
+    container.innerHTML = `
+        <div style="animation: fadeInUp 0.4s ease; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+            <p style="color: var(--accent-gold); font-size: 1.1rem;">You picked: <strong>${answer}</strong></p>
+            <p style="color: var(--text-secondary); margin-top: 0.5rem; font-size: 0.9rem;">Waiting to see what your partner thinks...</p>
+            <button onclick="loadGame()" style="background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); color: white; padding: 0.5rem 1.5rem; border-radius: 20px; cursor: pointer; margin-top: 1rem;">Next Game 🔄</button>
+        </div>`;
+    // Emit to partner via socket
+    if (typeof socket !== 'undefined') {
+        socket.emit('interaction', {type: 'game_pick', answer: answer});
+    }
+}
+
+// Surprise Drop logic
+setTimeout(() => {
+    const orb = document.getElementById('surprise-orb');
+    if (orb) {
+        orb.style.opacity = '1';
+        orb.style.transform = 'scale(1)';
+    }
+}, Math.random() * 30000 + 15000); // Show between 15-45 seconds after load
+
+function revealSurprise() {
+    const orb = document.getElementById('surprise-orb');
+    const modal = document.getElementById('surprise-modal');
+    const text = document.getElementById('surprise-text');
+    
+    orb.style.display = 'none';
+    text.textContent = SURPRISES[Math.floor(Math.random() * SURPRISES.length)];
+    modal.style.display = 'flex';
+    
+    // Trigger particle burst
+    createParticleBurst();
+}
+
+function closeSurprise() {
+    document.getElementById('surprise-modal').style.display = 'none';
+}
+
+function createParticleBurst() {
+    const burst = document.getElementById('surprise-particle-burst');
+    burst.innerHTML = '';
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.cssText = `
+            position: absolute; width: 8px; height: 8px; border-radius: 50%;
+            background: ${['#F2C94C','#FF9A9E','#00F2FE','#ffffff'][Math.floor(Math.random()*4)]};
+            left: 50%; top: 50%;
+            animation: particleFly ${0.8 + Math.random()}s ease-out forwards;
+            --dx: ${(Math.random() - 0.5) * 200}px;
+            --dy: ${(Math.random() - 0.5) * 200}px;
+        `;
+        burst.appendChild(p);
+    }
+}
+
+// Update partner status in real-time via socket events
+if (typeof socket !== 'undefined') {
+    socket.on('presence_update', function(data) {
+        const dot = document.getElementById('partner-dot');
+        const txt = document.getElementById('partner-status-text');
+        if (dot && txt && data.user_id != '{{ current_user.id }}') {
+            if (data.status === 'online') {
+                dot.style.background = '#00b894';
+                dot.style.boxShadow = '0 0 8px #00b894';
+                txt.textContent = 'Online';
+            } else {
+                dot.style.background = '#636e72';
+                dot.style.boxShadow = 'none';
+                txt.textContent = 'Away';
+            }
+        }
+    });
+
+    socket.on('mood_sync', function(data) {
+        const display = document.getElementById('partner-mood-display');
+        if (display && data.user_id != '{{ current_user.id }}') {
+            display.textContent = data.my_mood || 'Unknown 🌫️';
+        }
+    });
+}
+</script>
+{% endblock %}

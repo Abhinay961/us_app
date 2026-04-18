@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="min-height: calc(100vh - var(--nav-height));">
+    <div class="section-header" style="margin-bottom: 2rem;">
+        <h1 class="section-title" style="font-family: var(--font-serif);">
+            <i class="fa-solid fa-star" style="color: var(--accent-gold);"></i> Surprise Tasks
+        </h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Every act of love, recorded forever.</p>
+    </div>
+
+    {% if surprises %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for s in surprises %}
+        <div class="card" style="border: 1px solid {% if s.completed %}rgba(0,184,148,0.3){% else %}rgba(242,201,76,0.2){% endif %}; background: {% if s.completed %}rgba(0,184,148,0.04){% else %}rgba(242,201,76,0.04){% endif %}; animation: fadeInUp 0.4s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.8rem;">
+                <div style="font-size: 1.5rem;">{% if s.completed %}✅{% else %}⭐{% endif %}</div>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ s.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+            </div>
+            <p style="font-family: var(--font-serif); font-size: 1.05rem; margin-bottom: 1rem;">{{ s.task_text }}</p>
+
+            {% if s.completed %}
+            <div style="background: rgba(0,184,148,0.1); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.5rem;">
+                <p style="font-size: 0.85rem; color: #00b894; margin-bottom: 0.3rem;">✓ Completed {{ s.completed_at.strftime('%b %d, %Y') }}</p>
+                {% if s.response %}
+                <p style="color: var(--text-secondary); font-size: 0.9rem; font-style: italic;">"{{ s.response }}"</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <form method="POST" action="{{ url_for('complete_surprise', entry_id=s.id) }}">
+                <textarea name="response" rows="2" placeholder="How did it go? (optional)" style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color); resize: none; margin-bottom: 0.7rem;"></textarea>
+                <button type="submit" class="balance-restore-btn" style="width: 100%; background: linear-gradient(135deg, #00b894, #00cec9); border: none; color: white; font-weight: bold; padding: 0.7rem; border-radius: 25px; cursor: pointer;">
+                    Mark as Done ✨
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 5rem 2rem; color: var(--text-secondary);">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">⭐</div>
+        <p>No surprise tasks yet. They'll appear here from the dashboard!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

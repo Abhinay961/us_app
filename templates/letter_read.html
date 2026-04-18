@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('letters') }}" style="color: var(--text-secondary);"><i class="fa-solid fa-arrow-left"></i> Back to Letters</a>
+        <a href="{{ url_for('letter_pdf', id=letter.id) }}" class="btn-secondary" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.05); color: white;"><i class="fa-solid fa-download"></i> Save as PDF</a>
+    </div>
+
+    <div class="card paper-letter" style="background: #fdfbf7; color: #333; padding: 3rem; border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;">
+        <!-- Stamp / Design -->
+        <div style="position: absolute; top: 20px; right: 20px; opacity: 0.5; font-size: 3rem; color: #a30000;">
+            <i class="fa-solid fa-stamp"></i>
+        </div>
+        
+        <h1 style="font-family: var(--font-serif); text-align: center; margin-bottom: 2rem; color: #222; border-bottom: 1px solid #ddd; padding-bottom: 1rem;">{{ letter.title }}</h1>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3rem; font-family: var(--font-serif); font-style: italic; color: #555;">
+            <span>Date: {{ letter.created_at.strftime('%B %d, %Y') }}</span>
+            <span>From: {{ letter.author.username }}</span>
+        </div>
+        
+        <div style="font-family: var(--font-serif); font-size: 1.2rem; line-height: 2; white-space: pre-wrap; color: #111;">{{ letter.content }}</div>
+        
+        <div style="margin-top: 4rem; text-align: right; font-family: var(--font-serif); font-size: 1.2rem; font-style: italic; color: #333;">
+            <p>Yours,</p>
+            <p style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem; color: #000;">{{ letter.author.username }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

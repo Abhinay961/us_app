@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="section-header">
+    <h1 class="section-title"><i class="fa-solid fa-briefcase"></i> Career Tracker</h1>
+</div>
+
+<div class="card">
+    <h3>Log This Week's Progress</h3>
+    <form method="POST" action="{{ url_for('career') }}" style="margin-top: 1rem;">
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Week Of (Monday)</label>
+            <input type="date" name="week_start" required style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--accent-pink);"><i class="fa-solid fa-check-circle"></i> Goals Achieved</label>
+                <textarea name="goals_achieved" rows="3" style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);"></textarea>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);"><i class="fa-solid fa-xmark-circle"></i> Goals Not Achieved</label>
+                <textarea name="goals_not_achieved" rows="3" style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);"></textarea>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--accent-red);"><i class="fa-solid fa-triangle-exclamation"></i> Problems Faced</label>
+                <textarea name="problems_faced" rows="3" style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);"></textarea>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #10b981;"><i class="fa-solid fa-arrow-trend-up"></i> Improvements for Next Week</label>
+                <textarea name="improvements" rows="3" style="width: 100%; padding: 0.8rem; border-radius: 5px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--border-color);"></textarea>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn-primary" style="max-width: 200px;">Save Log</button>
+    </form>
+</div>
+
+<div class="career-logs" style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem;">
+    {% for log in logs %}
+    <div class="card" style="border-left: 4px solid var(--accent-pink);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+            <h4 style="margin: 0;">{{ log.user.username }}</h4>
+            <span style="color: var(--text-secondary); font-size: 0.9rem;">Week: {{ log.week_start.strftime('%b %d, %Y') }}</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.9rem;">
+            {% if log.goals_achieved %}
+            <div><strong style="color: var(--accent-pink);">Achieved:</strong> <div style="white-space: pre-wrap; margin-top: 0.3rem;">{{ log.goals_achieved }}</div></div>
+            {% endif %}
+            {% if log.goals_not_achieved %}
+            <div><strong style="color: var(--text-secondary);">Missed:</strong> <div style="white-space: pre-wrap; margin-top: 0.3rem;">{{ log.goals_not_achieved }}</div></div>
+            {% endif %}
+            {% if log.problems_faced %}
+            <div><strong style="color: var(--accent-red);">Problems:</strong> <div style="white-space: pre-wrap; margin-top: 0.3rem;">{{ log.problems_faced }}</div></div>
+            {% endif %}
+            {% if log.improvements %}
+            <div><strong style="color: #10b981;">Improvements:</strong> <div style="white-space: pre-wrap; margin-top: 0.3rem;">{{ log.improvements }}</div></div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-secondary);">No career logs yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

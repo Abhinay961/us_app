@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% if superpower_level > 0 %}
+<!-- ====== SUPERPOWER ACTIVATED ====== -->
+<div class="superpower-container level-{{ superpower_level }}" id="superpower-container">
+    <!-- Storm particles -->
+    <div class="storm-field" id="storm-field"></div>
+
+    <div class="superpower-core" id="superpower-core">
+        <!-- Aura rings -->
+        <div class="aura-ring r1"></div>
+        <div class="aura-ring r2"></div>
+        <div class="aura-ring r3"></div>
+
+        <div class="superpower-content">
+            <div class="sp-icon">⚡</div>
+            <h1 class="sp-title">Superpower Activated</h1>
+            <p class="sp-level-badge">Level {{ superpower_level }}
+                {% if superpower_level == 1 %}— Warning{% elif superpower_level == 2 %}— Storm{% else %}— Cosmic Takeover{% endif %}
+            </p>
+            <p class="sp-sub">
+                {% if partner %}{{ partner.username }}{% else %}Your partner{% endif %} has been away for
+                <strong style="color: var(--accent-gold);">{{ inactivity_hours }}h</strong>
+            </p>
+
+            <div class="sp-task-area" id="task-area">
+                <p style="color: rgba(255,255,255,0.6); margin-bottom: 1.5rem; font-size: 0.9rem;">Their fate is sealed. Spin to reveal their task:</p>
+                <button class="sp-spin-btn" id="spin-btn" onclick="spinWheel()">
+                    <span class="spin-icon">🌀</span> Spin the Wheel of Fate
+                </button>
+                <div id="task-revealed" style="display: none; animation: fadeInUp 0.6s ease;">
+                    <div class="task-card" id="task-card">
+                        <div class="task-emoji" id="task-emoji">💌</div>
+                        <p id="task-text" style="font-size: 1.1rem; font-family: var(--font-serif); margin: 1rem 0;"></p>
+                        <form method="POST" action="{{ url_for('punishments') }}" style="margin-top: 1rem;">
+                            <input type="hidden" name="action" value="create">
+                            <input type="hidden" name="description" id="task-hidden-desc">
+                            <button type="submit" class="sp-activate-btn">Assign This Task ⚡</button>
+                        </form>
+                        <button onclick="spinWheel()" style="background: transparent; border: none; color: rgba(255,255,255,0.4); cursor: pointer; margin-top: 1rem; font-size: 0.85rem;">Spin again ↻</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- ====== CALM STATE ====== -->
+<div class="gothic-theme calm-punishments" style="margin: -2rem -2rem 0 -2rem; min-height: calc(100vh - var(--nav-height));">
+    <!-- Background embers -->
+    <div class="ember" style="left: 10%; animation-duration: 8s;"></div>
+    <div class="ember" style="left: 30%; animation-duration: 11s; animation-delay: 2s;"></div>
+    <div class="ember" style="left: 55%; animation-duration: 9s; animation-delay: 1s;"></div>
+    <div class="ember" style="left: 75%; animation-duration: 13s; animation-delay: 3s;"></div>
+    <div class="ember" style="left: 88%; animation-duration: 10s; animation-delay: 0.5s;"></div>
+
+    <div class="relative-z" style="padding: 2rem; max-width: 1000px; margin: 0 auto; width: 100%;">
+        <div class="section-header">
+            <h1 class="section-title gothic-title" style="font-family: var(--font-serif);">
+                <i class="fa-solid fa-bolt"></i> Superpower Mode
+            </h1>
+        </div>
+
+        <!-- Status banner -->
+        <div class="calm-banner">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚖️</div>
+            <h3 style="font-family: var(--font-serif); margin-bottom: 0.5rem;">Balance Restored</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                Both of you are active. The universe is at peace.
+                {% if self_superpower_level > 0 %}
+                <span style="color: var(--accent-pink); display: block; margin-top: 0.5rem;">⚠️ Warning: You've been inactive for {{ self_inactive_hours }}h. Your partner's superpower is charging...</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Assign a playful task manually -->
+        <div class="card gothic-card" style="margin-top: 2rem;">
+            <h3 style="font-family: var(--font-serif); margin-bottom: 1rem;"><i class="fa-solid fa-scroll"></i> Assign a Task</h3>
+            <form method="POST" action="{{ url_for('punishments') }}">
+                <input type="hidden" name="action" value="create">
+                <textarea name="description" rows="3" placeholder="Write a playful romantic task..." required style="width: 100%; padding: 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; resize: none;"></textarea>
+                <button type="submit" class="btn-primary">Assign Task ⚡</button>
+            </form>
+        </div>
+
+        <!-- Active tasks -->
+        {% if my_punishments %}
+        <h3 style="margin: 2rem 0 1rem; font-family: var(--font-serif);">Active Tasks for You</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+            {% for p in my_punishments if p.status == 'pending' %}
+            <div class="card gothic-card task-pending-card">
+                <div style="font-size: 1.5rem; margin-bottom: 0.8rem;">🎯</div>
+                <p style="margin-bottom: 1rem; font-family: var(--font-serif); font-size: 1rem;">{{ p.description }}</p>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Assigned {{ p.created_at.strftime('%b %d') }}</p>
+                <form method="POST" action="{{ url_for('punishments') }}">
+                    <input type="hidden" name="action" value="complete">
+                    <input type="hidden" name="punishment_id" value="{{ p.id }}">
+                    <button type="submit" class="balance-restore-btn">Mark Complete ✓</button>
+                </form>
+            </div>
+            {% else %}
+            <p style="color: var(--text-secondary); grid-column: 1/-1;">No pending tasks. You're free! 🌟</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Completed tasks -->
+        {% set completed = my_punishments | selectattr('status', 'eq', 'completed') | list %}
+        {% if completed %}
+        <h3 style="margin: 2rem 0 1rem; font-family: var(--font-serif); opacity: 0.6;">Completed Tasks</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+            {% for p in completed %}
+            <div class="card gothic-card" style="opacity: 0.5;">
+                <div style="font-size: 1rem; margin-bottom: 0.5rem;">✅</div>
+                <p style="font-size: 0.9rem;">{{ p.description }}</p>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem;">Completed {{ p.completed_at.strftime('%b %d') if p.completed_at else '' }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Balance Restored Flash (triggered after completion) -->
+<div id="balance-restored" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: white; opacity: 0; pointer-events: none; transition: opacity 0.3s;">
+    <div style="display: flex; height: 100%; align-items: center; justify-content: center; flex-direction: column; color: #1A0B2E;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">✨</div>
+        <h2 style="font-family: var(--font-serif); font-size: 2.5rem;">Balance Restored</h2>
+    </div>
+</div>
+
+<style>
+/* === Superpower Mode === */
+.superpower-container {
+    position: fixed;
+    top: var(--nav-height);
+    left: 0; width: 100%;
+    height: calc(100vh - var(--nav-height));
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.superpower-container.level-1 { background: radial-gradient(ellipse at center, #1a0020 0%, #0b0c10 100%); }
+.superpower-container.level-2 { background: radial-gradient(ellipse at center, #3d0000 0%, #0b0c10 100%); }
+.superpower-container.level-3 { background: radial-gradient(ellipse at center, #5c0000 0%, #000000 100%); }
+
+/* Storm field (animated particles) */
+.storm-field {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+
+/* Aura rings */
+.aura-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid;
+    animation: auraExpand 3s ease-in-out infinite;
+}
+.aura-ring.r1 { width: 200px; height: 200px; border-color: rgba(255,50,50,0.6); animation-delay: 0s; }
+.aura-ring.r2 { width: 300px; height: 300px; border-color: rgba(255,50,50,0.3); animation-delay: 0.5s; }
+.aura-ring.r3 { width: 420px; height: 420px; border-color: rgba(255,50,50,0.1); animation-delay: 1s; }
+.level-2 .aura-ring { border-color: rgba(255,100,0,0.6); }
+.level-3 .aura-ring { border-color: rgba(255,200,0,0.7); animation-duration: 1.5s; }
+
+@keyframes auraExpand {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+.superpower-core {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 500px;
+    height: 500px;
+}
+.superpower-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    max-width: 400px;
+    padding: 2rem;
+}
+.sp-icon {
+    font-size: 4rem;
+    animation: sp-pulse 1.5s ease-in-out infinite;
+    margin-bottom: 0.5rem;
+}
+@keyframes sp-pulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255,200,0,0.5)); }
+    50% { transform: scale(1.15); filter: drop-shadow(0 0 30px rgba(255,200,0,0.9)); }
+}
+.sp-title {
+    font-family: var(--font-serif);
+    font-size: 2.5rem;
+    color: white;
+    margin-bottom: 0.3rem;
+    text-shadow: 0 0 30px rgba(255,50,50,0.8);
+    letter-spacing: 0.05em;
+}
+.sp-level-badge {
+    color: var(--accent-gold);
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+.sp-sub {
+    color: rgba(255,255,255,0.6);
+    font-size: 1rem;
+    margin-bottom: 2rem;
+}
+
+.sp-spin-btn {
+    background: linear-gradient(135deg, #c0392b, #8e44ad);
+    border: none;
+    color: white;
+    padding: 1rem 2.5rem;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(192,57,43,0.6);
+    transition: all 0.3s;
+    font-family: var(--font-sans);
+}
+.sp-spin-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px rgba(192,57,43,0.9);
+}
+.spin-icon { display: inline-block; animation: spin 2s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.task-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,200,0,0.3);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-top: 1.5rem;
+    backdrop-filter: blur(10px);
+}
+.task-emoji { font-size: 2.5rem; }
+.sp-activate-btn {
+    background: linear-gradient(135deg, var(--accent-gold), #e67e22);
+    border: none;
+    color: #1A0B2E;
+    font-weight: bold;
+    padding: 0.8rem 2rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: var(--font-sans);
+    transition: all 0.3s;
+}
+.sp-activate-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(242,201,76,0.5); }
+
+/* Calm state */
+.calm-banner {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    margin-bottom: 1rem;
+}
+.task-pending-card {
+    border: 1px solid rgba(242, 201, 76, 0.3) !important;
+    background: rgba(242, 201, 76, 0.04) !important;
+}
+.balance-restore-btn {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    border: none;
+    color: white;
+    font-weight: bold;
+    padding: 0.7rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: all 0.3s;
+    width: 100%;
+}
+.balance-restore-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(0,184,148,0.4);
+}
+</style>
+
+<script>
+const SUPERPOWER_TASKS = [
+    {emoji: '💌', text: 'Send 3 heartfelt compliments right now'},
+    {emoji: '🎵', text: 'Share a song that describes your feelings about them'},
+    {emoji: '📞', text: 'Call and talk for at least 10 minutes'},
+    {emoji: '🎤', text: 'Send a voice note saying something sweet'},
+    {emoji: '📝', text: 'Write a surprise letter in the Letters section'},
+    {emoji: '📅', text: 'Plan our next date and add it to the Date Planner'},
+    {emoji: '📸', text: 'Upload a photo that reminds you of a happy memory'},
+    {emoji: '💭', text: 'Share 5 things you love about your partner in the journal'},
+    {emoji: '🌙', text: 'Write a manifestation for your relationship together'},
+    {emoji: '🎁', text: 'Plan a surprise for them this week and reveal it'},
+];
+
+// Storm particles
+function createStorm(level) {
+    const field = document.getElementById('storm-field');
+    if (!field) return;
+    const count = level * 30;
+    for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        const size = Math.random() * 4 + 1;
+        const duration = (Math.random() * 3 + 1);
+        const delay = Math.random() * 3;
+        const colors = ['#ff3838', '#ff9f43', '#ffd32a', '#ffffff'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        p.style.cssText = `
+            position: absolute;
+            width: ${size}px; height: ${size}px;
+            background: ${color};
+            border-radius: 50%;
+            top: ${Math.random() * 100}%;
+            left: ${Math.random() * 100}%;
+            box-shadow: 0 0 ${size*3}px ${color};
+            animation: stormSwirl ${duration}s ${delay}s ease-in-out infinite;
+        `;
+        field.appendChild(p);
+    }
+}
+
+function spinWheel() {
+    const btn = document.getElementById('spin-btn');
+    const revealArea = document.getElementById('task-revealed');
+    btn.style.opacity = '0.4';
+    btn.disabled = true;
+
+    let spins = 0;
+    let picked;
+    const interval = setInterval(() => {
+        picked = SUPERPOWER_TASKS[Math.floor(Math.random() * SUPERPOWER_TASKS.length)];
+        document.getElementById('task-emoji').textContent = picked.emoji;
+        document.getElementById('task-text').textContent = picked.text;
+        spins++;
+        if (spins >= 12) {
+            clearInterval(interval);
+            document.getElementById('task-hidden-desc').value = picked.text;
+            btn.style.display = 'none';
+            revealArea.style.display = 'block';
+        }
+    }, 80);
+}
+
+// Initialize storm on load if superpower active
+const spLevel = {{ superpower_level }};
+if (spLevel > 0) {
+    createStorm(spLevel);
+}
+
+// Balance restored flash on form submit
+document.querySelectorAll('form').forEach(form => {
+    if (form.querySelector('input[value="complete"]')) {
+        form.addEventListener('submit', function() {
+            const flash = document.getElementById('balance-restored');
+            flash.style.display = 'flex';
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 2000);
+        });
+    }
+});
+</script>
+
+{% endblock %}

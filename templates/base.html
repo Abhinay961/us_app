@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Full mobile viewport with safe area support for notch/punch-hole screens -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="US.">
+    <meta name="theme-color" content="#1A0B2E" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#1A0B2E">
+    <meta name="application-name" content="Private Universe">
+    <meta name="description" content="A shared private universe for two people.">
+    <meta name="msapplication-TileColor" content="#1A0B2E">
+    <meta name="msapplication-TileImage" content="/static/icon-144.png">
+    <!-- Prevent tap highlight on Android -->
+    <meta name="format-detection" content="telephone=no">
+
+    <title>US. - Private Universe</title>
+
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='icon-512.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='icon-192.png') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Bebas+Neue&family=Great+Vibes&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="presence-glow" class="presence-glow"></div>
+    <div id="heartbeat-pulse" class="heartbeat-pulse"></div>
+    <div id="tsparticles" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;"></div>
+    <div class="app-container {% if current_user.is_authenticated and self_inactive %}punished{% endif %}">
+        
+        {% if current_user.is_authenticated %}
+        <!-- Top Navigation -->
+        <nav class="top-navbar">
+            <div class="brand" style="margin: 0;">US.</div>
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' else '' }}" title="Home"><i class="fa-solid fa-house"></i></a>
+                <a href="{{ url_for('journal') }}" class="{{ 'active' if request.endpoint == 'journal' else '' }}" title="Journal"><i class="fa-solid fa-book"></i></a>
+                <a href="{{ url_for('letters') }}" class="{{ 'active' if request.endpoint == 'letters' or request.endpoint == 'view_letter' else '' }}" title="Letters"><i class="fa-solid fa-envelope"></i></a>
+                <a href="{{ url_for('timeline') }}" class="{{ 'active' if request.endpoint == 'timeline' else '' }}" title="Timeline"><i class="fa-solid fa-clock"></i></a>
+                <a href="{{ url_for('photos') }}" class="{{ 'active' if request.endpoint == 'photos' else '' }}" title="Photos"><i class="fa-solid fa-image"></i></a>
+                <a href="{{ url_for('career') }}" class="{{ 'active' if request.endpoint == 'career' else '' }}" title="Career"><i class="fa-solid fa-briefcase"></i></a>
+                <a href="{{ url_for('dates') }}" class="{{ 'active' if request.endpoint == 'dates' else '' }}" title="Dates"><i class="fa-solid fa-calendar-check"></i></a>
+                <a href="{{ url_for('discussions') }}" class="{{ 'active' if request.endpoint == 'discussions' else '' }}" title="Discuss"><i class="fa-solid fa-comments"></i></a>
+                <a href="{{ url_for('punishments') }}" class="{{ 'active' if request.endpoint == 'punishments' else '' }}" title="Superpower"><i class="fa-solid fa-bolt"></i></a>
+                <a href="{{ url_for('manifestations') }}" class="{{ 'active' if request.endpoint == 'manifestations' else '' }}" title="Manifestations"><i class="fa-solid fa-wand-magic-sparkles"></i></a>
+                <a href="{{ url_for('universe') }}" class="{{ 'active' if request.endpoint == 'universe' else '' }}" title="Universe"><i class="fa-solid fa-galaxy" style="background: linear-gradient(135deg,#a29bfe,#fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i></a>
+                
+                <button class="notification-bell {{ 'has-unread' if unread_notifications_count > 0 else '' }}" onclick="toggleNotifications()">
+                    <i class="fa-solid fa-bell"></i>
+                    {% if unread_notifications_count > 0 %}
+                    <span class="notification-badge">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </button>
+                <a href="{{ url_for('logout') }}" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+            
+            <div class="notifications-dropdown" id="notif-dropdown">
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); font-weight: bold;">Notifications</div>
+                {% if notifications %}
+                    {% for n in notifications %}
+                        <a href="{{ n.link if n.link else '#' }}" class="notif-item {{ 'unread' if not n.is_read else '' }}">
+                            {{ n.message }}<br>
+                            <small class="text-secondary">{{ n.created_at.strftime('%b %d, %I:%M %p') }}</small>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="notif-item" style="text-align: center;">No new notifications.</div>
+                {% endif %}
+            </div>
+        </nav>
+        
+        <script>
+            function toggleNotifications() {
+                const dropdown = document.getElementById('notif-dropdown');
+                dropdown.classList.toggle('show');
+                
+                if (dropdown.classList.contains('show') && {{ unread_notifications_count }} > 0) {
+                    fetch('{{ url_for("read_notifications") }}', {method: 'POST'})
+                    .then(() => {
+                        const badge = document.querySelector('.notification-badge');
+                        if(badge) badge.style.display = 'none';
+                        document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+                    });
+                }
+            }
+            
+            document.addEventListener('click', function(event) {
+                const nav = document.querySelector('.top-navbar');
+                if (nav && !nav.contains(event.target)) {
+                    const dropdown = document.getElementById('notif-dropdown');
+                    if (dropdown) dropdown.classList.remove('show');
+                }
+            });
+        </script>
+        {% endif %}
+
+        <main class="content-area">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                <div class="flash-messages">
+                  {% for message in messages %}
+                    <div class="flash-msg">{{ message }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+
+        {% if current_user.is_authenticated %}
+        <!-- Mobile Bottom Navigation -->
+        <nav class="mobile-bottom-nav">
+            <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' else '' }}"><i class="fa-solid fa-house"></i></a>
+            <a href="{{ url_for('journal') }}" class="{{ 'active' if request.endpoint == 'journal' else '' }}"><i class="fa-solid fa-book"></i></a>
+            <a href="{{ url_for('letters') }}" class="{{ 'active' if request.endpoint == 'letters' or request.endpoint == 'view_letter' else '' }}"><i class="fa-solid fa-envelope"></i></a>
+            <a href="{{ url_for('timeline') }}" class="{{ 'active' if request.endpoint == 'timeline' else '' }}"><i class="fa-solid fa-clock"></i></a>
+            <a href="{{ url_for('photos') }}" class="{{ 'active' if request.endpoint == 'photos' else '' }}"><i class="fa-solid fa-image"></i></a>
+            <a href="#" class="menu-toggle" id="mobile-menu-toggle"><i class="fa-solid fa-bars"></i></a>
+        </nav>
+        
+        <!-- Mobile Extended Menu Overlay -->
+        <div class="mobile-extended-menu" id="mobile-extended-menu">
+            <div class="menu-content">
+                <button class="close-menu" id="close-menu"><i class="fa-solid fa-xmark"></i></button>
+                <h3>More</h3>
+                <a href="{{ url_for('career') }}"><i class="fa-solid fa-briefcase"></i> Career</a>
+                <a href="{{ url_for('dates') }}"><i class="fa-solid fa-calendar-check"></i> Dates</a>
+                <a href="{{ url_for('discussions') }}"><i class="fa-solid fa-comments"></i> Discuss</a>
+                <a href="{{ url_for('punishments') }}"><i class="fa-solid fa-bolt"></i> Superpower</a>
+                <a href="{{ url_for('manifestations') }}"><i class="fa-solid fa-wand-magic-sparkles"></i> Manifestations</a>
+                <a href="{{ url_for('universe') }}"><i class="fa-solid fa-star-of-life"></i> Our Universe</a>
+                <a href="{{ url_for('logout') }}" class="text-danger"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if current_user.is_authenticated and self_inactive %}
+    <div class="punishment-overlay">
+        <div class="punishment-content">
+            <h2><i class="fa-solid fa-heart-crack"></i></h2>
+            <h3>You've been distant...</h3>
+            <p>Write something in the journal or upload a photo to unlock the app ❤️</p>
+            <p class="tease">"So... ignoring me now? I expected better 😌"</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}").catch(err => console.log('SW setup failed'));
+            });
+        }
+
+        // Initialize Cosmic Particles
+        tsParticles.load("tsparticles", {
+            background: {
+                color: { value: "transparent" }
+            },
+            fpsLimit: 60,
+            interactivity: {
+                events: {
+                    onHover: { enable: true, mode: "repulse" },
+                    resize: true
+                },
+                modes: {
+                    repulse: { distance: 100, duration: 0.4 }
+                }
+            },
+            particles: {
+                color: { value: ["#ffffff", "#FF9A9E", "#00F2FE", "#F2C94C"] },
+                links: { enable: false },
+                move: {
+                    direction: "none",
+                    enable: true,
+                    outModes: { default: "bounce" },
+                    random: true,
+                    speed: 0.3,
+                    straight: false
+                },
+                number: {
+                    density: { enable: true, area: 800 },
+                    value: 60
+                },
+                opacity: {
+                    animation: { enable: true, speed: 0.5, minimumValue: 0.1 },
+                    value: { min: 0.1, max: 0.5 }
+                },
+                shape: { type: "circle" },
+                size: {
+                    value: { min: 1, max: 3 }
+                }
+            },
+            detectRetina: true
+        });
+    </script>
+
+    <!-- Socket.IO Integration for Real-time presence and evolution -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        {% if current_user.is_authenticated %}
+        const socket = io();
+
+        // Presence UI
+        socket.on('presence_update', function(data) {
+            if (data.user_id != '{{ current_user.id }}') {
+                const glow = document.getElementById('presence-glow');
+                if (glow) {
+                    if (data.status === 'online') {
+                        glow.classList.add('active');
+                    } else {
+                        glow.classList.remove('active');
+                    }
+                }
+            }
+        });
+
+        // Heartbeat Sync
+        socket.on('partner_heartbeat', function(data) {
+            const pulse = document.getElementById('heartbeat-pulse');
+            if (pulse) {
+                pulse.classList.remove('animate');
+                void pulse.offsetWidth; // trigger reflow
+                pulse.classList.add('animate');
+            }
+        });
+
+        // Send interaction events on click
+        document.addEventListener('click', () => {
+            socket.emit('interaction', {type: 'click'});
+        });
+        
+        // Universe Evolution Logic
+        socket.on('universe_evolution', function(data) {
+            // Speed up particles temporarily when interaction occurs
+            if (window.tsParticles) {
+                const container = window.tsParticles.domItem(0);
+                if (container) {
+                    container.options.particles.move.speed = 1.5;
+                    container.refresh();
+                    setTimeout(() => { 
+                        container.options.particles.move.speed = 0.3; 
+                        container.refresh();
+                    }, 2000);
+                }
+            }
+        });
+        
+        // Send heartbeat ping every 10 seconds
+        setInterval(() => {
+            socket.emit('heartbeat_sync');
+        }, 10000);
+        
+        // Mood Sync Engine
+        socket.on('mood_sync', function(data) {
+            // Determine blended color based on moods
+            let myMood = data.my_mood;
+            let partnerMood = data.partner_mood;
+            
+            let bgSec = '#1A0B2E'; // Default
+            let accent1 = '#FF9A9E';
+            
+            if (myMood === 'Calm' || partnerMood === 'Calm') {
+                bgSec = '#0D1B2A';
+                accent1 = '#415A77';
+            }
+            if (myMood === 'Excited' || partnerMood === 'Excited') {
+                bgSec = '#4A0E4E';
+                accent1 = '#F2C94C';
+            }
+            if (myMood === 'Stressed' || partnerMood === 'Stressed') {
+                bgSec = '#2b0f12';
+                accent1 = '#ff4d4d';
+            }
+            
+            // Apply dynamically to body CSS variables
+            document.documentElement.style.setProperty('--bg-secondary', bgSec);
+            document.documentElement.style.setProperty('--accent-pink', accent1);
+            
+            // Change particles color dynamically
+            if (window.tsParticles) {
+                const container = window.tsParticles.domItem(0);
+                if (container) {
+                    container.options.particles.color.value = ['#ffffff', accent1];
+                    container.refresh();
+                }
+            }
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

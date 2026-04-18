@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="min-height: calc(100vh - var(--nav-height));">
+
+    <div class="section-header" style="margin-bottom: 2rem;">
+        <h1 class="section-title" style="font-family: var(--font-serif);">
+            <i class="fa-solid fa-dice" style="color: var(--accent-gold);"></i> Couple's Games
+        </h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Questions saved forever. Answers tell your story.</p>
+    </div>
+
+    <!-- Start a Game -->
+    <div class="card" style="border: 1px solid rgba(242,201,76,0.2); margin-bottom: 2rem;">
+        <h3 style="font-family: var(--font-serif); margin-bottom: 1.5rem; color: var(--accent-gold);">
+            <i class="fa-solid fa-plus-circle"></i> Ask a New Question
+        </h3>
+        <form method="POST" action="{{ url_for('play_game') }}" id="game-form">
+            <div style="margin-bottom: 1rem;">
+                <label style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.5rem;">Game Type</label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <label class="game-type-btn"><input type="radio" name="game_type" value="this_or_that" checked> 👆 This or That</label>
+                    <label class="game-type-btn"><input type="radio" name="game_type" value="quiz"> 🧠 Who Would...</label>
+                    <label class="game-type-btn"><input type="radio" name="game_type" value="truth"> 💭 Truth</label>
+                    <label class="game-type-btn"><input type="radio" name="game_type" value="dare"> 🎯 Dare</label>
+                </div>
+            </div>
+
+            <!-- Quick picks or custom -->
+            <div style="margin-bottom: 1rem;">
+                <label style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.5rem;">Question</label>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;" id="quick-picks">
+                    <button type="button" class="quick-pick" onclick="setQuestion('Coffee or Tea?','☕ Coffee','🍵 Tea')">Coffee or Tea?</button>
+                    <button type="button" class="quick-pick" onclick="setQuestion('Sunrise or Sunset?','🌅 Sunrise','🌇 Sunset')">Sunrise or Sunset?</button>
+                    <button type="button" class="quick-pick" onclick="setQuestion('Who falls asleep faster?','Me 😴','You 😴')">Who sleeps faster?</button>
+                    <button type="button" class="quick-pick" onclick="setQuestion('Stars or Ocean?','⭐ Stars','🌊 Ocean')">Stars or Ocean?</button>
+                    <button type="button" class="quick-pick" onclick="setQuestion('What\\'s the first song that reminds you of us?','','')">Favourite memory song?</button>
+                </div>
+                <textarea name="question" id="question-input" rows="2" placeholder="Write your own question..." required
+                    style="width: 100%; padding: 0.8rem; border-radius: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color); resize: none; font-family: var(--font-sans);"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;" id="options-row">
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.4rem;">Option A (optional)</label>
+                    <input type="text" name="option_a" id="option-a" placeholder="e.g. Coffee" style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color);">
+                </div>
+                <div>
+                    <label style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.4rem;">Option B (optional)</label>
+                    <input type="text" name="option_b" id="option-b" placeholder="e.g. Tea" style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color);">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.4rem;">My Answer (optional)</label>
+                <input type="text" name="my_answer" placeholder="Answer it yourself first..." style="width: 100%; padding: 0.7rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color);">
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-paper-plane"></i> Send Question to {{ partner.username if partner else 'Partner' }}
+            </button>
+        </form>
+    </div>
+
+    <!-- Pending questions from partner -->
+    {% if pending %}
+    <div style="margin-bottom: 2rem;">
+        <h3 style="font-family: var(--font-serif); color: var(--accent-pink); margin-bottom: 1rem;">
+            ⏳ Waiting for your answer ({{ pending|length }})
+        </h3>
+        {% for s in pending %}
+        <div class="card" style="border: 1px solid rgba(255,154,158,0.3); background: rgba(255,154,158,0.04); margin-bottom: 1rem; animation: fadeInUp 0.5s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <span class="game-type-tag">{{ s.game_type|replace('_',' ')|title }}</span>
+                <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ s.created_at.strftime('%b %d, %I:%M %p') }}</span>
+            </div>
+            <p style="font-family: var(--font-serif); font-size: 1.2rem; margin-bottom: 1rem;">{{ s.question }}</p>
+            {% if s.user1_answer %}
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+                <i class="fa-solid fa-user"></i> {{ s.user1.username }} answered: <strong style="color: var(--accent-gold);">{{ s.user1_answer }}</strong>
+            </p>
+            {% endif %}
+            <form method="POST" action="{{ url_for('answer_game', session_id=s.id) }}" style="display: flex; gap: 0.8rem; flex-wrap: wrap;">
+                {% if s.option_a and s.option_b %}
+                <button type="submit" name="answer" value="{{ s.option_a }}" class="game-answer-btn">{{ s.option_a }}</button>
+                <button type="submit" name="answer" value="{{ s.option_b }}" class="game-answer-btn">{{ s.option_b }}</button>
+                {% else %}
+                <input type="text" name="answer" placeholder="Your answer..." required style="flex: 1; padding: 0.7rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--border-color);">
+                <button type="submit" class="btn-primary" style="padding: 0.7rem 1.5rem;">Answer 💬</button>
+                {% endif %}
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Game History -->
+    <h3 style="font-family: var(--font-serif); margin-bottom: 1rem; color: var(--text-secondary);">📜 Game History</h3>
+    {% if sessions %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for s in sessions if s not in pending %}
+        <div class="card game-history-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                <span class="game-type-tag">{{ s.game_type|replace('_',' ')|title }}</span>
+                <div style="display: flex; align-items: center; gap: 0.8rem;">
+                    {% if s.status == 'completed' %}
+                    <span style="background: rgba(0,184,148,0.2); color: #00b894; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 20px;">Both Answered</span>
+                    {% else %}
+                    <span style="background: rgba(255,154,158,0.2); color: var(--accent-pink); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 20px;">Awaiting...</span>
+                    {% endif %}
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ s.created_at.strftime('%b %d') }}</span>
+                </div>
+            </div>
+            <p style="font-family: var(--font-serif); font-size: 1rem; margin-bottom: 0.8rem; color: white;">{{ s.question }}</p>
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ s.user1.username }}</span>
+                    <p style="color: var(--accent-gold);">{{ s.user1_answer or '—' }}</p>
+                </div>
+                {% if s.user2 %}
+                <div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">{{ s.user2.username }}</span>
+                    <p style="color: var(--accent-pink);">{{ s.user2_answer or '...' }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">No games yet. Ask your first question above! 🎮</p>
+    {% endif %}
+</div>
+
+<style>
+.game-type-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+.game-type-btn:has(input:checked) {
+    background: rgba(242,201,76,0.2);
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+.game-type-btn input[type="radio"] { display: none; }
+
+.quick-pick {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+.quick-pick:hover { background: rgba(255,255,255,0.1); color: white; }
+
+.game-type-tag {
+    background: rgba(162,155,254,0.15);
+    color: #a29bfe;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.game-answer-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(242,201,76,0.3);
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    flex: 1;
+}
+.game-answer-btn:hover {
+    background: rgba(242,201,76,0.2);
+    border-color: var(--accent-gold);
+    transform: scale(1.03);
+    box-shadow: 0 0 15px rgba(242,201,76,0.3);
+}
+
+.game-history-card {
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: border-color 0.3s;
+}
+.game-history-card:hover { border-color: rgba(162,155,254,0.3); }
+</style>
+
+<script>
+function setQuestion(q, a, b) {
+    document.getElementById('question-input').value = q;
+    document.getElementById('option-a').value = a;
+    document.getElementById('option-b').value = b;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1 class="brand-large">US.</h1>
+        <p class="subtitle">Our Private Space</p>
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="input-group">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" name="username" placeholder="Username" required>
+            </div>
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn-primary">Enter</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

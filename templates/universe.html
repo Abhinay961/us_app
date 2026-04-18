@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="universe-section" style="position: fixed; top: var(--nav-height); left: 0; width: 100%; height: calc(100vh - var(--nav-height)); overflow: hidden; background: radial-gradient(ellipse at center, #0a0020 0%, #000000 100%);">
+
+    <!-- HUD: Level & Stats -->
+    <div class="universe-hud" style="position: absolute; top: 1.5rem; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: none;">
+        <div style="font-family: var(--font-serif); font-size: 0.8rem; color: rgba(255,255,255,0.5); letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 0.3rem;">Our Universe</div>
+        <div style="font-family: var(--font-serif); font-size: 2rem; color: white; text-shadow: 0 0 20px rgba(162,155,254,0.8);">Level {{ universe_level }} · {{ universe_name }}</div>
+        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 0.3rem;">{{ total_memories }} memories woven into the cosmos</div>
+    </div>
+
+    <!-- Legend -->
+    <div class="universe-legend" style="position: absolute; bottom: 80px; left: 1.5rem; z-index: 10; display: flex; flex-direction: column; gap: 0.5rem;">
+        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.1em;">Memory Types</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.6);"><span style="width:10px;height:10px;border-radius:50%;background:#7ed6df;display:inline-block;"></span> Journal</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.6);"><span style="width:14px;height:14px;border-radius:50%;background:#f9ca24;display:inline-block;"></span> Photo</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.6);"><span style="width:10px;height:10px;border-radius:50%;background:#ff9ff3;display:inline-block;"></span> Letter</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.6);"><span style="width:8px;height:8px;border-radius:50%;background:#ffeaa7;display:inline-block;"></span> Event</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: rgba(255,255,255,0.6);"><span style="width:16px;height:16px;border-radius:50%;background:rgba(162,155,254,0.5);display:inline-block;box-shadow: 0 0 8px #a29bfe;"></span> Manifestation</div>
+    </div>
+
+    <!-- Hint -->
+    <div style="position: absolute; bottom: 80px; right: 1.5rem; z-index: 10; font-size: 0.75rem; color: rgba(255,255,255,0.35); text-align: right;">
+        Click any star to explore<br>Scroll to zoom
+    </div>
+
+    <!-- The Universe Canvas -->
+    <canvas id="universeCanvas" style="width: 100%; height: 100%; display: block; cursor: crosshair;"></canvas>
+
+    <!-- Memory Modal (zoomed-in cosmic body) -->
+    <div id="memory-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; max-width: 420px; width: 90%;">
+        <div class="memory-modal-card" style="background: rgba(10,0,32,0.95); border: 1px solid rgba(162,155,254,0.4); border-radius: 20px; padding: 2rem; text-align: center; backdrop-filter: blur(20px); box-shadow: 0 0 60px rgba(162,155,254,0.3); animation: fadeInUp 0.4s ease;">
+            <div id="modal-type-icon" style="font-size: 2.5rem; margin-bottom: 1rem;"></div>
+            <h3 id="modal-title" style="font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 0.5rem; color: white;"></h3>
+            <p id="modal-date" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-bottom: 0.5rem;"></p>
+            <p id="modal-user" style="color: var(--accent-pink); font-size: 0.9rem; margin-bottom: 1.5rem;"></p>
+            <button onclick="closeModal()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.6rem 2rem; border-radius: 25px; cursor: pointer; transition: all 0.3s;">Close ✕</button>
+        </div>
+    </div>
+
+    <!-- Backdrop for modal -->
+    <div id="modal-backdrop" onclick="closeModal()" style="display:none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50;"></div>
+</div>
+
+<style>
+.universe-section canvas {
+    touch-action: none;
+}
+</style>
+
+<script>
+const COSMIC_DATA = {{ cosmic_bodies_json | safe }};
+const UNIVERSE_LEVEL = {{ universe_level }};
+
+const canvas = document.getElementById('universeCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H, bodies = [], camera = {x: 0, y: 0, zoom: 1}, dragging = false, lastMouse = {x: 0, y: 0};
+const ICONS = {journal: '📓', photo: '📸', letter: '💌', event: '⭐', manifestation: '✨'};
+const SIZE_MAP = {star: 5, planet: 9, comet: 4, nebula: 12};
+
+function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+    placeBodies();
+    draw();
+}
+
+function placeBodies() {
+    bodies = COSMIC_DATA.map((d, i) => {
+        // Distribute in a spiral galaxy pattern
+        const angle = i * 2.4 + (i / COSMIC_DATA.length) * Math.PI * 8;
+        const radius = 80 + Math.sqrt(i) * 55;
+        const spread = (Math.random() - 0.5) * 60;
+        return {
+            ...d,
+            x: Math.cos(angle) * radius + (Math.random() - 0.5) * spread,
+            y: Math.sin(angle) * radius * 0.6 + (Math.random() - 0.5) * spread,
+            r: SIZE_MAP[d.size] || 5,
+            twinkleOffset: Math.random() * Math.PI * 2,
+            twinkleSpeed: 0.5 + Math.random() * 1.5
+        };
+    });
+
+    // Add background stars (non-memory)
+    const bgCount = Math.max(200, UNIVERSE_LEVEL * 80);
+    bodies._bg = Array.from({length: bgCount}, () => ({
+        x: (Math.random() - 0.5) * Math.max(W, H) * 6,
+        y: (Math.random() - 0.5) * Math.max(W, H) * 6,
+        r: Math.random() * 1.5 + 0.3,
+        alpha: Math.random() * 0.6 + 0.2,
+        twinkle: Math.random() * Math.PI * 2
+    }));
+}
+
+let frame = 0;
+function draw() {
+    requestAnimationFrame(draw);
+    ctx.clearRect(0, 0, W, H);
+    frame += 0.01;
+
+    // Deep space gradient
+    const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H));
+    grad.addColorStop(0, '#0a0020');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(W/2 + camera.x, H/2 + camera.y);
+    ctx.scale(camera.zoom, camera.zoom);
+
+    // Draw nebula glow based on level
+    if (UNIVERSE_LEVEL >= 3) {
+        for (let i = 0; i < Math.min(UNIVERSE_LEVEL, 5); i++) {
+            const nx = Math.cos(i * 1.2) * 200;
+            const ny = Math.sin(i * 1.2) * 120;
+            const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, 120 + i * 30);
+            ng.addColorStop(0, `rgba(${i%2===0?'162,155,254':'255,154,158'}, 0.08)`);
+            ng.addColorStop(1, 'transparent');
+            ctx.fillStyle = ng;
+            ctx.fillRect(nx - 200, ny - 200, 400, 400);
+        }
+    }
+
+    // Background stars
+    (bodies._bg || []).forEach(s => {
+        const alpha = s.alpha * (0.7 + 0.3 * Math.sin(frame * 1.5 + s.twinkle));
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Memory cosmic bodies
+    bodies.forEach((b, i) => {
+        if (!b.x && b.x !== 0) return;
+        const twinkle = 0.8 + 0.2 * Math.sin(frame * b.twinkleSpeed + b.twinkleOffset);
+        const r = b.r * twinkle;
+
+        // Glow
+        const glow = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r * 4);
+        glow.addColorStop(0, b.color + 'aa');
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r * 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nebula ring
+        if (b.size === 'nebula') {
+            ctx.strokeStyle = b.color + '66';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, r * 2.5, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    });
+
+    ctx.restore();
+}
+
+function toWorld(sx, sy) {
+    return {
+        x: (sx - W/2 - camera.x) / camera.zoom,
+        y: (sy - H/2 - camera.y) / camera.zoom
+    };
+}
+
+// Click to open memory
+canvas.addEventListener('click', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const w = toWorld(e.clientX - rect.left, e.clientY - rect.top);
+    for (const b of bodies) {
+        if (!b.x && b.x !== 0) continue;
+        const dx = b.x - w.x, dy = b.y - w.y;
+        const hitR = (b.r * 5);
+        if (dx*dx + dy*dy <= hitR*hitR) {
+            openModal(b);
+            return;
+        }
+    }
+});
+
+// Zoom
+canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    camera.zoom = Math.max(0.3, Math.min(5, camera.zoom * delta));
+}, {passive: false});
+
+// Drag to pan
+canvas.addEventListener('mousedown', e => { dragging = true; lastMouse = {x: e.clientX, y: e.clientY}; });
+canvas.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    camera.x += e.clientX - lastMouse.x;
+    camera.y += e.clientY - lastMouse.y;
+    lastMouse = {x: e.clientX, y: e.clientY};
+});
+canvas.addEventListener('mouseup', () => dragging = false);
+canvas.addEventListener('touchstart', e => { dragging = true; lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY}; }, {passive: true});
+canvas.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    camera.x += e.touches[0].clientX - lastMouse.x;
+    camera.y += e.touches[0].clientY - lastMouse.y;
+    lastMouse = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+}, {passive: true});
+canvas.addEventListener('touchend', () => dragging = false);
+
+function openModal(b) {
+    document.getElementById('modal-type-icon').textContent = ICONS[b.type] || '⭐';
+    document.getElementById('modal-title').textContent = b.title;
+    document.getElementById('modal-date').textContent = b.date;
+    document.getElementById('modal-user').textContent = `by ${b.user}`;
+    document.getElementById('memory-modal').style.display = 'block';
+    document.getElementById('modal-backdrop').style.display = 'block';
+}
+
+function closeModal() {
+    document.getElementById('memory-modal').style.display = 'none';
+    document.getElementById('modal-backdrop').style.display = 'none';
+}
+
+window.addEventListener('resize', resize);
+resize();
+</script>
+{% endblock %}
